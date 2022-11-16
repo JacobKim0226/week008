@@ -1,0 +1,19 @@
+# -*- makefile -*-
+
+# Test names.
+
+# Sources for tests.
+
+MLFQS_OUTPUTS = 				\
+tests/threads/mlfqs/mlfqs-load-1.output		\
+tests/threads/mlfqs/mlfqs-load-60.output		\
+tests/threads/mlfqs/mlfqs-load-avg.output		\
+tests/threads/mlfqs/mlfqs-recent-1.output		\
+tests/threads/mlfqs/mlfqs-fair-2.output		\
+tests/threads/mlfqs/mlfqs-fair-20.output		\
+tests/threads/mlfqs/mlfqs-nice-2.output		\
+tests/threads/mlfqs/mlfqs-nice-10.output		\
+tests/threads/mlfqs/mlfqs-block.output
+
+$(MLFQS_OUTPUTS): KERNELFLAGS += -mlfqs
+$(MLFQS_OUTPUTS): TIMEOUT = 480
