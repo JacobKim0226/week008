@@ -198,34 +198,19 @@ lock_acquire (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
-	struct thread *t = thread_current();
+	struct thread *curr = thread_current();
 	if(lock -> holder){
-		t -> wait_on_lock = &lock;
+		curr -> wait_on_lock = lock;
 		// thread_current() -> priority = priority;
-		list_insert_ordered (&t -> donations, &t -> donation_elem, cmp_donation_priority, 0);
+		list_insert_ordered (&lock->holder -> donations, &curr -> donation_elem, cmp_priority, 0);
 		donate_priority();
 	}
 	sema_down (&lock->semaphore);
-	t -> wait_on_lock = NULL;
-	lock->holder = t;
-	// if lock->holder->priority < 
+	curr -> wait_on_lock = NULL;
+	lock->holder = curr;
 }
 
-	/* project 1 Project Schedule
-	현재 쓰레드의 priority를 lock을 holder하고 있는 
-	쓰레드의 priority에 부여한다 */
 
-void donate_priority(void){
-	struct thread *curr = thread_current();
-	struct thread *cur_t;
-
-	for (int depth = 0; depth <=8; depth++){
-		cur_t->priority = curr -> priority;
-		cur_t = cur_t -> wait_on_lock ->holder;
-		if(cur_t -> wait_on_lock == NULL)
-			break;
-	}
-}
 
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -377,10 +362,10 @@ bool cmp_sem_priority (const struct list_elem *a, const struct list_elem *b,
 	struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
 	struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
 
-	struct list *waiter_a = list_begin(&sa->semaphore.waiters);
-	struct list *waiter_b = list_begin(&sb->semaphore.waiters);
+	struct list *waiter_a = &(sa->semaphore.waiters);
+	struct list *waiter_b = &(sb->semaphore.waiters);
 
-	return cmp_priority(waiter_a,waiter_b,0);					
+	return cmp_priority(list_begin(waiter_a),list_begin(waiter_b),0);					
 	// return list_entry(a,struct thread, elem) -> priority > list_entry(b,struct thread, elem) -> priority;
 	// return;					
 }
@@ -398,30 +383,5 @@ bool cmp_donation_priority (const struct list_elem *a, const struct list_elem *b
 	// return;					
 }
 
-/* project 1 Priority Schedule 
-	lock release를 실행하고 락이 해제된 쓰레드를 donation 리스트에서 삭제한다*/
-void remove_with_lock (struct lock *lock){
-	struct list_elem *curr_donation_elem = list_begin(&thread_current()->donations);
-	
-	while(curr_donation_elem != list_tail(&thread_current() -> donations)){
-		struct thread *curr_donation_thread = list_entry(curr_donation_elem,struct thread, donation_elem);
-		if(curr_donation_thread-> wait_on_lock == lock){
-			curr_donation_elem = list_remove(curr_donation_elem);
-		}
-		else{
-			curr_donation_elem = list_next(curr_donation_elem);
-		}
-	}
-}
 
-/* project 1 Priority Schedule */
-void refresh_priority(void){
-	struct thread *curr = thread_current();
 
-	list_sort(&curr -> donations, cmp_donation_priority, 0);
-	/* 현재 쓰레드의 우선순위를 기부받기전 init_priority로 변경해준다 */
-	curr -> priority = curr -> init_priority;
-
-	test_max_priority();	// 수정 필요해보임
-
-}

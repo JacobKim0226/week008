@@ -93,8 +93,8 @@ timer_sleep (int64_t ticks) {       //int
     int64_t start = timer_ticks ();
     ASSERT (intr_get_level () == INTR_ON);
 
-    thread_sleep(start+ticks);      // project 1 - Alarm Clock 추가
    
+    thread_sleep(start+ticks);      // project 1 - Alarm Clock 추가
    
    
     /*기존 코드 CPU를 계속 점유하게하는 코드*/

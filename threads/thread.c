@@ -262,10 +262,10 @@ bool cmp_priority(const struct list_elem *a,
 
 
 void test_max_priority(void){
-    struct thread *runn = thread_current();
+    struct thread *curr = thread_current();
     int e = list_entry(list_begin(&ready_list), struct thread, elem) -> priority;
-    if (runn -> priority < e){
-        if(runn != idle_thread)
+    if (curr -> priority < e){
+        if(curr != idle_thread)
             thread_yield();
     }
 
@@ -431,6 +431,63 @@ thread_yield (void) {
     intr_set_level (old_level);  //
 }
 
+
+
+	/* project 1 Project Schedule
+	현재 쓰레드의 priority를 lock을 holder하고 있는 
+	쓰레드의 priority에 부여한다 */
+
+void donate_priority(void){
+	struct thread *curr = thread_current();
+
+	for (int depth = 0; depth <8; depth++){
+		if(curr -> wait_on_lock == NULL)
+			break;
+        struct thread *curr_holder = curr -> wait_on_lock -> holder;
+		curr_holder->priority = curr -> priority;
+		curr = curr_holder;
+	}
+}
+
+/* project 1 Priority Schedule 
+	lock release를 실행하고 락이 해제된 쓰레드를 donation 리스트에서 삭제한다*/
+void
+remove_with_lock (struct lock *lock)
+{
+  struct list_elem *e;
+  struct thread *curr = thread_current ();
+
+  for (e = list_begin (&curr->donations); e != list_end (&curr->donations); e = list_next (e)){
+    struct thread *t = list_entry (e, struct thread, donation_elem);
+    if (t->wait_on_lock == lock)
+      list_remove (&t->donation_elem);
+  }
+}
+
+
+
+
+/* project 1 Priority Schedule */
+void refresh_priority(void){
+	struct thread *curr = thread_current();
+
+
+	curr -> priority = curr -> init_priority;
+
+    if (!list_empty(&curr -> donations)){
+	    list_sort(&curr -> donations, cmp_priority, 0);
+
+	/* 현재 쓰레드의 우선순위를 기부받기전 init_priority로 변경해준다 */
+
+        struct thread *dona = list_entry(list_front(&curr->donations),struct thread, donation_elem);
+        if (dona -> priority > curr -> priority){
+            curr -> priority = dona -> priority;
+        }
+    }
+
+}
+
+
 /* Sets the current thread's priority to NEW_PRIORITY.
     running 중인 thread의 priority 수정되었을 경우
     read_list에서 우선순위가 가장 큰 쓰레드와 비교하여
@@ -439,12 +496,18 @@ thread_yield (void) {
     donation을 고려해서 다시 수정해줘야한다*/
 void
 thread_set_priority (int new_priority) {
-    int e = list_entry(list_begin(&ready_list), struct thread, elem) -> priority;     /* project 1 Priority Schedule */
-    thread_current ()->priority = new_priority;
-    if (e > new_priority){
-        thread_yield();
-    }
+    struct thread *curr = thread_current();
+    curr -> init_priority = new_priority;
+    refresh_priority();
+    test_max_priority();
+
+    // int e = list_entry(list_begin(&ready_list), struct thread, elem) -> priority;     /* project 1 Priority Schedule */
+    // thread_current ()->priority = new_priority;
+    // if (e > new_priority){
+    //     thread_yield();
+    // }
 }
+
 
 /* Returns the current thread's priority. */
 int
@@ -542,9 +605,9 @@ init_thread (struct thread *t, const char *name, int priority) {
     t->priority = priority;
     t->magic = THREAD_MAGIC;
     /* project 1 Priority Schedule */
-    t->init_priority = priority;
-    t->wait_on_lock;
-    list_init(&t->donations);
+    t->init_priority = priority;    // donation 이전의 priority를 기억하기 위해 저장
+    t->wait_on_lock = NULL;         // lock 하고 싶은 lock을 저장        
+    list_init(&t->donations);       // donation list 초기화
     // 초기화 더 필요
 }
 
